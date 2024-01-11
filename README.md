@@ -24,7 +24,6 @@ go run main.go -file my.torrent
 ```
 example result:
 ```json
-// my.torrent.json
 {
    "name": "My Torrent File",
    "created_by": "@thxrhmn",
