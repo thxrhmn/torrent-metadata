@@ -12,10 +12,10 @@ import (
 )
 
 type Torrent struct {
-	Name         interface{}    `json:"name"`
-	CreatedBy    interface{}    `json:"created_by"`
-	CreationDate interface{}    `json:"creation_date"`
-	Announce     interface{}    `json:"announce"`
+	Name         string         `json:"name"`
+	CreatedBy    string         `json:"created_by"`
+	CreationDate int64          `json:"creation_date"`
+	Announce     string         `json:"announce"`
 	AnnounceList []interface{}  `json:"announce_list"`
 	Size         HumanReadable  `json:"size"`
 	PieceLength  HumanReadable  `json:"piece_length"`
@@ -66,12 +66,12 @@ func main() {
 		return
 	}
 
-	name := info["name"]
+	name := info["name"].(string)
 	pieceLength := info["piece length"].(int64)
 	pieceLengthString := humanize.Bytes(uint64(pieceLength))
-	createdBy := decoderMap["created by"]
-	creationDate := decoderMap["creation date"]
-	announce := decoderMap["announce"]
+	createdBy := decoderMap["created by"].(string)
+	creationDate := decoderMap["creation date"].(int64)
+	announce := decoderMap["announce"].(string)
 	announceList := extractAnnounceList(decoderMap["announce-list"])
 	var torrentSize int64
 
