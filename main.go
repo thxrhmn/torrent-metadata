@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/dustin/go-humanize"
 	bencode "github.com/jackpal/bencode-go"
@@ -16,19 +17,26 @@ type Torrent struct {
 	CreationDate interface{}    `json:"creation_date"`
 	Announce     interface{}    `json:"announce"`
 	AnnounceList []interface{}  `json:"announce_list"`
-	Size         string         `json:"size"`
+	Size         HumanReadable  `json:"size"`
+	PieceLength  HumanReadable  `json:"piece_length"`
 	TotalFiles   int            `json:"total_files"`
 	Files        []TorrentFiles `json:"files"`
 }
 
 type TorrentFiles struct {
-	Length int64         `json:"length"`
-	Path   []interface{} `json:"path"`
+	Length HumanReadable `json:"length"`
+	Path   string        `json:"path"`
+}
+
+type HumanReadable struct {
+	Size0 int64  `json:"0"`
+	Size1 string `json:"1"`
 }
 
 func main() {
 	var filePath string
-	flag.StringVar(&filePath, "file", "tor.torrent", "Path to the torrent file")
+
+	flag.StringVar(&filePath, "file", "", "Path to the torrent file")
 	flag.Parse()
 
 	file, err := os.Open(filePath)
@@ -59,11 +67,13 @@ func main() {
 	}
 
 	name := info["name"]
+	pieceLength := info["piece length"].(int64)
+	pieceLengthString := humanize.Bytes(uint64(pieceLength))
 	createdBy := decoderMap["created by"]
 	creationDate := decoderMap["creation date"]
 	announce := decoderMap["announce"]
 	announceList := extractAnnounceList(decoderMap["announce-list"])
-	var torrentSize string
+	var torrentSize int64
 
 	files, ok := info["files"].([]interface{})
 	if ok {
@@ -78,9 +88,16 @@ func main() {
 		CreationDate: creationDate,
 		Announce:     announce,
 		AnnounceList: announceList,
-		Size:         torrentSize,
-		TotalFiles:   len(torrents),
-		Files:        torrents,
+		Size: HumanReadable{
+			Size0: torrentSize,
+			Size1: humanize.Bytes(uint64(torrentSize)),
+		},
+		PieceLength: HumanReadable{
+			Size0: pieceLength,
+			Size1: pieceLengthString,
+		},
+		TotalFiles: len(torrents),
+		Files:      torrents,
 	}
 
 	jsonData, err := json.MarshalIndent(data, "", "    ")
@@ -89,7 +106,15 @@ func main() {
 		return
 	}
 
-	fmt.Println(string(jsonData))
+	// Write the JSON data to the file
+	jsonPath := filePath + ".json"
+	err = os.WriteFile(jsonPath, jsonData, 0644)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return
+	}
+
+	fmt.Println("JSON data successfully written to", jsonPath)
 }
 
 func extractAnnounceList(announceList interface{}) []interface{} {
@@ -112,7 +137,7 @@ func extractAnnounceList(announceList interface{}) []interface{} {
 	return result
 }
 
-func extractFiles(files []interface{}) (string, []TorrentFiles) {
+func extractFiles(files []interface{}) (int64, []TorrentFiles) {
 	var result []TorrentFiles
 
 	var torrentSize int64
@@ -128,19 +153,32 @@ func extractFiles(files []interface{}) (string, []TorrentFiles) {
 			continue
 		}
 
-		path, ok := fileMap["path"].([]interface{})
+		pathArray, ok := fileMap["path"].([]interface{})
 		if !ok {
 			continue
 		}
 
+		// Convert the array elements to strings
+		var pathStrings []string
+		for _, elem := range pathArray {
+			if str, ok := elem.(string); ok {
+				pathStrings = append(pathStrings, str)
+			}
+		}
+
+		// Join the strings with "/"
+		resultPath := strings.Join(pathStrings, "/")
+
 		data := TorrentFiles{
-			Length: length,
-			Path:   path,
+			Length: HumanReadable{
+				Size0: length,
+				Size1: humanize.Bytes(uint64(length)),
+			},
+			Path: resultPath,
 		}
 		torrentSize += length
 		result = append(result, data)
 	}
 
-	size := humanize.Bytes(uint64(torrentSize))
-	return size, result
+	return torrentSize, result
 }
