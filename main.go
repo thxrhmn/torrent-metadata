@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/dustin/go-humanize"
 	bencode "github.com/jackpal/bencode-go"
@@ -25,7 +24,7 @@ type Torrent struct {
 
 type TorrentFiles struct {
 	Length HumanReadable `json:"length"`
-	Path   string        `json:"path"`
+	Path   []string      `json:"path"`
 }
 
 type HumanReadable struct {
@@ -71,7 +70,11 @@ func main() {
 	pieceLengthString := humanize.Bytes(uint64(pieceLength))
 	createdBy := decoderMap["created by"].(string)
 	creationDate := decoderMap["creation date"].(int64)
-	announce := decoderMap["announce"].(string)
+	var announce string
+	announceInterface := decoderMap["announce"]
+	if announceInterface != nil {
+		announce = decoderMap["announce"].(string)
+	}
 	announceList := extractAnnounceList(decoderMap["announce-list"])
 	var torrentSize int64
 
@@ -166,15 +169,12 @@ func extractFiles(files []interface{}) (int64, []TorrentFiles) {
 			}
 		}
 
-		// Join the strings with "/"
-		resultPath := strings.Join(pathStrings, "/")
-
 		data := TorrentFiles{
 			Length: HumanReadable{
 				Size0: length,
 				Size1: humanize.Bytes(uint64(length)),
 			},
-			Path: resultPath,
+			Path: pathStrings,
 		}
 		torrentSize += length
 		result = append(result, data)
