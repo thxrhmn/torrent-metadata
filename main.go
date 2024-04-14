@@ -13,10 +13,10 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"github.com/qiniu/qmgo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"github.com/joho/godotenv"
 )
 
 const (
@@ -255,9 +255,9 @@ func moveTorrentFile(torrentPath string) error {
 }
 
 func deleteTorrentFile(filePath string) error {
-    err := os.Remove(filePath)
-    if err != nil {
-        return fmt.Errorf("error deleting file: %w", err)
-    }
-    return nil
+	err := os.Remove(filePath)
+	if err != nil {
+		return fmt.Errorf("error deleting file: %w", err)
+	}
+	return nil
 }
