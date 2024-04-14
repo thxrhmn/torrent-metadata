@@ -16,10 +16,11 @@ import (
 	"github.com/qiniu/qmgo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/joho/godotenv"
 )
 
 const (
-	maxGoroutines   = 1
+	maxGoroutines   = 10
 	torrentPath     = "/root/etc/torrents"
 	torrentDonePath = "/root/etc/torrents-done"
 )
@@ -57,6 +58,11 @@ type HumanReadableSize struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Waktu sebelum eksekusi operasi database
 	start := time.Now()
 
@@ -70,10 +76,9 @@ func main() {
 	}
 
 	// MongoDB connection URI
-	uri := "mongodb://thxrhmn:thxrhmn@95.111.231.236:27017/"
-	// uri := "mongodb://thxrhmn:thxrhmn@localhost:27017/"
-	dbName := "torsnif"
-	collectionName := "torrents"
+	uri := os.Getenv("MONGO_URI")
+	dbName := os.Getenv("MONGO_DBNAME")
+	collectionName := os.Getenv("MONGO_DBCOLL")
 
 	// Create a MongoDB session
 	ctx := context.Background()
@@ -210,8 +215,7 @@ func processTorrentFile(ctx context.Context, collection *qmgo.Collection, torren
 		}
 	} else {
 		fmt.Printf("❌  %s already in database\n", torrent.Magnet.InfoHash)
-		// fmt.Printf("❌  %s Torrent dengan hash yang sama sudah ada dalam database\n", torrent.Magnet.InfoHash)
-		// Move the .torrent file
+		// Delete the .torrent file
 		err = deleteTorrentFile(torrentPath)
 		if err != nil {
 			return fmt.Errorf("error delete torrent file: %w", err)
@@ -226,7 +230,6 @@ func processTorrentFile(ctx context.Context, collection *qmgo.Collection, torren
 	}
 
 	fmt.Printf("✅  %s\n", torrent.Hash)
-	// fmt.Printf("✅  %s\n", torrent.Magnet.DisplayName)
 
 	// Move the .torrent file
 	err = moveTorrentFile(torrentPath)
